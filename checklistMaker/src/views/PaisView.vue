@@ -73,23 +73,23 @@ export default {
     },
     methods: {
       funcionBraStore() {
-          this.$store.commit('setCierre', 'BRA');
+          this.$store.commit('setPais', 'BRA');
           this.$router.push('/Fecha');
       },
       funcionArgStore() {
-          this.$store.commit('setCierre', 'ARG');
+          this.$store.commit('setPais', 'ARG');
           this.$router.push('/Fecha');
       },
       funcionColStore() {
-          this.$store.commit('setCierre', 'COL');
+          this.$store.commit('setPais', 'COL');
           this.$router.push('/Fecha');
       },
       funcionChiStore() {
-          this.$store.commit('setCierre', 'CHI');
+          this.$store.commit('setPais', 'CHI');
           this.$router.push('/Fecha');
       },
       funcionUryStore() {
-          this.$store.commit('setCierre', 'URY');
+          this.$store.commit('setPais', 'URY');
           this.$router.push('/Fecha');
       },
     },

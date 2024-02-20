@@ -16,9 +16,9 @@
                     <div class="card bg-dark text-warning h-100">
                     <div class="card-body py-5">
                         Seleciona acá una fecha
-                        <DatePicker v-model="fechaSeleccionada" />
+                        <DatePicker v-model="fechaSeleccionada" :format="dateFormat"/>
                     </div>
-                    <RouterLink to="/Cuadro" class="text-decoration-none text-warning">
+                    <RouterLink to="/Cuadro" class="text-decoration-none text-warning" @click="funcionFechaStore" >
                         <div class="card-footer d-flex">
                         
                             Aceptar
@@ -31,14 +31,45 @@
     </div>
   </template>
   
-<script setup>
-    import DatePicker from 'vue3-datepicker';
+<script>
+    import  DatePicker from 'vue3-datepicker';
     import { RouterLink, RouterView } from 'vue-router';
     import Navbar from '../components/Navbar.vue';
     import Sidebar from '../components/Sidebar.vue';
     import store from '../store/store';
+    import {ref} from 'vue';
     // Inicializa la fecha seleccionada
-    let fechaSeleccionada = null;
+    export default {
+        components:{
+            Navbar,
+            Sidebar,
+            DatePicker
+        },
+        setup() {
+            const fechaSeleccionada = ref(null);
+            const dateFormat = 'dd-MM-yyyy';
+            return {
+            fechaSeleccionada
+            };
+        },
+        methods: {
+            funcionFechaStore() {
+                // Formatear la fecha seleccionada
+                const formattedDate = this.fechaSeleccionada ? this.formatDate(this.fechaSeleccionada) : null;
+                // Almacenar la fecha formateada en el almacenamiento Vuex
+                this.$store.commit('setFecha', formattedDate);
+                // Navegar a la ruta '/Cuadro'
+                this.$router.push('/Cuadro');
+            },
+            formatDate(date) {
+                const day = date.getDate();
+                const month = date.getMonth() + 1;
+                const year = date.getFullYear();
+                // Formatear la fecha en 'dd-MM-yyyy'
+                return `${day < 10 ? '0' + day : day}-${month < 10 ? '0' + month : month}-${year}`;
+            }
+        },
+    };
 </script>
 <style scoped>
 .custom-date-picker {

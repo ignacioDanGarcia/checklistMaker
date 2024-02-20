@@ -55,7 +55,7 @@ export default {
           this.$store.commit('setCierre', 'MO');
           this.$router.push('/Pais');
       },
-      funcionMoStore() {
+      funcionFactStore() {
           this.$store.commit('setCierre', 'FACT');
           this.$router.push('/Pais');
       },

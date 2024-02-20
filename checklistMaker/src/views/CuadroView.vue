@@ -3,6 +3,7 @@ import { RouterLink, RouterView } from 'vue-router';
 import Navbar from '../components/Navbar.vue';
 import Sidebar from '../components/Sidebar.vue';
 import store from '../store/store';
+import * as XLSX from 'xlsx';
 
 //con esto evaluas si ya existia una carpeta
 //store.state.Pais
@@ -18,7 +19,10 @@ export default {
   data() {
     return {
       headers: ['Columna 1', 'Columna 2', 'Columna 3', 'Columna 4'],
-      datosMo: []
+      datosMo: [],
+      variable: store.state.isFecha,
+      variable2: store.state.isCierre,
+      variable3: store.state.isPais
     };
   },
   mounted() {
@@ -26,51 +30,36 @@ export default {
     this.cargarDatosMo(rutaExcel);
   },
   methods: {
-    cargarDatosMo(rutaExcel) {
-      const nombreArchivo = `${store.state.isCierre}${store.state.isPais}${store.state.isFecha}.json`;
-
-      // Ruta del archivo JSON
-      const rutaJson = `/${nombreArchivo}`;
-
-      // Utiliza fetch para verificar si el archivo existe
-      fetch(rutaJson, { method: 'HEAD' })
-        .then(response => {
-          if (response.ok) {
-            // Si el archivo existe, cargarlo
-            return response.json();
-          } else {
-            // Si el archivo no existe, crearlo
-            return this.crearArchivo(rutaExcel, nombreArchivo);
-          }
-        })
-        .then(data => {
-          // Almacena los datos recuperados en la propiedad datosMo
-          this.datosMo = data;
-        })
-        .catch(error => {
-          console.error('Error al cargar o crear el archivo JSON:', error);
-        });
-    },
-    async crearArchivo(rutaExcel, nombreArchivo) {
-      const workbook = await this.leerArchivoExcel(rutaExcel);
-      const jsonData = this.convertirHojaAJson(workbook);
-
-      const rutaJson = `/${nombreArchivo}`;
-      await this.escribirArchivoJson(rutaJson, jsonData);
-      return jsonData;
+    async cargarDatosMo(rutaExcel) {
+      try {
+        const workbook = await this.leerArchivoExcel(rutaExcel);
+        this.procesarDatos(workbook);
+        const nombreArchivo = `${store.state.isCierre}${store.state.isPais}${store.state.isFecha}.json`;
+        await this.guardarArchivoJson(nombreArchivo);
+      } catch (error) {
+        console.error('Error al cargar o procesar el archivo Excel:', error);
+      }
     },
     async leerArchivoExcel(rutaExcel) {
-      const response = await fetch(rutaExcel);
+      const response = await fetch(rutaExcel, {
+        headers: {
+          'Content-Type': 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+        }
+      });
       const data = await response.arrayBuffer();
       return XLSX.read(data, { type: 'array' });
     },
-    convertirHojaAJson(workbook) {
+    procesarDatos(workbook) {
       const sheetName = workbook.SheetNames[0];
       const worksheet = workbook.Sheets[sheetName];
-      return XLSX.utils.sheet_to_json(worksheet, { header: 1 });
+      const sheetData = XLSX.utils.sheet_to_json(worksheet, { header: 1 });
+      this.headers = sheetData.slice(0, 4).map(row => row[0]);
+      this.datosMo = sheetData.slice(4).map(row => row.slice(0, 4));
     },
-    async escribirArchivoJson(rutaJson, data) {
-      const file = new File([JSON.stringify(data)], rutaJson, { type: 'application/json' });
+    async guardarArchivoJson(nombreArchivo) {
+      const data = { headers: this.headers, datosMo: this.datosMo };
+      const jsonData = JSON.stringify(data);
+      const file = new File([jsonData], nombreArchivo, { type: 'application/json' });
       const formData = new FormData();
       formData.append('file', file);
 
@@ -84,7 +73,7 @@ export default {
       }
     }
   }
-}
+};
 
 </script>
 
@@ -96,7 +85,7 @@ export default {
       <div class="container-fluid">
         <div class="row">
           <div class="col-md-12 text-warning">
-            <h4>Checklist</h4>
+            <h4>Checklist {{ variable }} {{ variable2 }} {{ variable3 }}</h4>
           </div>
         </div>
         <div class="row" style="color: black;">
