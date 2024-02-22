@@ -4,7 +4,7 @@ import Navbar from '../components/Navbar.vue';
 import Sidebar from '../components/Sidebar.vue';
 import store from '../store/store';
 import * as XLSX from 'xlsx';
-
+import readXlsFile from "read-excel-file";
 //con esto evaluas si ya existia una carpeta
 //store.state.Pais
 //store.state.Fecha
@@ -26,52 +26,75 @@ export default {
     };
   },
   mounted() {
-    const rutaExcel = 'CheckListGlobal.xlsx';
-    this.cargarDatosMo(rutaExcel);
+    this.cargarDatosMo();
   },
   methods: {
-    async cargarDatosMo(rutaExcel) {
+    async cargarDatosMo() {
       try {
-        const workbook = await this.leerArchivoExcel(rutaExcel);
-        this.procesarDatos(workbook);
-        const nombreArchivo = `${store.state.isCierre}${store.state.isPais}${store.state.isFecha}.json`;
-        await this.guardarArchivoJson(nombreArchivo);
+        const rutajson = `${store.state.isFecha}${store.state.isPais}${store.state.isCierre}.json`;
+        //if rutajson no existe then leer archivo excel que siempre lo va a crear
+        const workbook = await this.leerArchivoExcel(document.getElementById('excel'), rutajson);
+        //leerJson
       } catch (error) {
         console.error('Error al cargar o procesar el archivo Excel:', error);
       }
     },
-    async leerArchivoExcel(rutaExcel) {
-      const response = await fetch(rutaExcel, {
-        headers: {
-          'Content-Type': 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+    async leerArchivoExcel(rutaExcel, nombreArchivoJSON) {
+      const input = rutaExcel;
+      readXlsFile(input.files[0]).then((rows) => {
+          this.datosMo = rows.slice(1);
+          const filasFiltradas = this.filtrarFilas();
+          const primeraFila = rows[0];
+          this.headers = primeraFila.slice(0, 4);
+
+          this.datosMo = filasFiltradas.slice(1).map(fila => fila.slice(0, 4));
+          //const datosJSON = JSON.stringify(this.datosMo, null, 2);
+      });
+    },
+    filtrarFilas() {
+        let filasFiltradas = [];
+        switch (store.state.isPais) {
+            case 'ARG':
+                filasFiltradas = this.datosMo.filter(fila => fila[5] !== null);
+                break;
+            case 'BRA':
+                filasFiltradas = this.datosMo.filter(fila => fila[6] !== null);
+                break;
+            case 'COL':
+                filasFiltradas = this.datosMo.filter(fila => fila[7] !== null);
+                break;
+            case 'CHI':
+                filasFiltradas = this.datosMo.filter(fila => fila[8] !== null);
+                break;
+            case 'URY':
+                filasFiltradas = this.datosMo.filter(fila => fila[9] !== null);
+                break;
+            default:
+                break;
         }
-      });
-      const data = await response.arrayBuffer();
-      return XLSX.read(data, { type: 'array' });
+        if (store.state.isCierre === 'MO') {
+            filasFiltradas = filasFiltradas.filter(fila => fila[10] !== null);
+        } else {
+            filasFiltradas = filasFiltradas.filter(fila => fila[11] !== null);
+        }
+        return filasFiltradas;
     },
-    procesarDatos(workbook) {
-      const sheetName = workbook.SheetNames[0];
-      const worksheet = workbook.Sheets[sheetName];
-      const sheetData = XLSX.utils.sheet_to_json(worksheet, { header: 1 });
-      this.headers = sheetData.slice(0, 4).map(row => row[0]);
-      this.datosMo = sheetData.slice(4).map(row => row.slice(0, 4));
+    setHora(event) {
+      // Obtenemos la fila actual
+      const rowIndex = event.parentNode.parentNode.rowIndex;
+      const row = this.datosMo[rowIndex - 1]; // Restamos 1 porque los índices comienzan en 0
+
+      // Obtenemos la fecha y hora actual
+      const fechaHoraActual = new Date().toLocaleString();
+
+      // Actualizamos el campo vacío en la fila con la fecha y hora actual
+      row[row.length - 1] = fechaHoraActual;
+
+      // Si quieres hacer algo más con la fila actual, puedes hacerlo aquí
+
+      // Notificamos que se ha actualizado la fila
+      console.log('Se ha seteado la hora para la fila:', row);
     },
-    async guardarArchivoJson(nombreArchivo) {
-      const data = { headers: this.headers, datosMo: this.datosMo };
-      const jsonData = JSON.stringify(data);
-      const file = new File([jsonData], nombreArchivo, { type: 'application/json' });
-      const formData = new FormData();
-      formData.append('file', file);
-
-      const response = await fetch('/guardar-json', {
-        method: 'POST',
-        body: formData
-      });
-
-      if (!response.ok) {
-        throw new Error('Error al guardar el archivo JSON');
-      }
-    }
   }
 };
 
@@ -86,6 +109,7 @@ export default {
         <div class="row">
           <div class="col-md-12 text-warning">
             <h4>Checklist {{ variable }} {{ variable2 }} {{ variable3 }}</h4>
+            <input id="excel" type="file" @change="cargarDatosMo()"/>
           </div>
         </div>
         <div class="row" style="color: black;">
@@ -104,6 +128,7 @@ export default {
                     <thead>
                         <tr>
                         <th v-for="header in headers" :key="header">{{ header }}</th>
+                        <th>Set hora</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -115,6 +140,7 @@ export default {
                     <tfoot>
                       <tr>
                         <th v-for="header in headers" :key="header">{{ header }}</th>
+                        <th>Set hora</th>
                       </tr>
                     </tfoot>
                   </table>
