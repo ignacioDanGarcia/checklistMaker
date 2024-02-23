@@ -19,55 +19,136 @@ export default {
   data() {
     return {
       headers: ['Columna 1', 'Columna 2', 'Columna 3', 'Columna 4'],
-      datosMo: [],
-      variable: store.state.isFecha,
-      variable2: store.state.isCierre,
-      variable3: store.state.isPais
+      datosChecklist: [],
+      datosPostmortem: [],
+      selectedOption: null,
+      options: [
+        { value: 'Mariana', label: 'Mariana' },
+        { value: 'Julian', label: 'Julian' },
+        { value: 'Mariano', label: 'Mariano' },
+        { value: 'Nacho', label: 'Nacho' },
+      ]
     };
   },
   mounted() {
-    this.cargarDatosMo();
+    this.cargardatosChecklist();
+    this.cargardatosPostmortem();
   },
   methods: {
-    async cargarDatosMo() {
+    async cargardatosChecklist() {
       try {
-        const rutajson = `${store.state.isFecha}${store.state.isPais}${store.state.isCierre}.json`;
-        //if rutajson no existe then leer archivo excel que siempre lo va a crear
-        const workbook = await this.leerArchivoExcel(document.getElementById('excel'), rutajson);
-        //leerJson
+        //const rutaExcel = path.join(__dirname, `${store.state.isFecha}${store.state.isPais}${store.state.isCierre}.xlsx`);
+        const workbook = await this.leerArchivoExcel(document.getElementById('excel'));
+        
       } catch (error) {
         console.error('Error al cargar o procesar el archivo Excel:', error);
       }
     },
-    async leerArchivoExcel(rutaExcel, nombreArchivoJSON) {
-      const input = rutaExcel;
-      readXlsFile(input.files[0]).then((rows) => {
-          this.datosMo = rows.slice(1);
-          const filasFiltradas = this.filtrarFilas();
-          const primeraFila = rows[0];
-          this.headers = primeraFila.slice(0, 4);
+    async cargardatosPostmortem(){
 
-          this.datosMo = filasFiltradas.slice(1).map(fila => fila.slice(0, 4));
-          //const datosJSON = JSON.stringify(this.datosMo, null, 2);
-      });
     },
-    filtrarFilas() {
+    async leerArchivoExcel(rutaExcel) {
+      const input = rutaExcel;
+      const file = input.files[0];
+      const reader = new FileReader();
+
+      reader.onload = (event) => {
+        const data = new Uint8Array(event.target.result);
+        const workbook = XLSX.read(data, { type: 'array' });
+
+        
+        const sheetNames = workbook.SheetNames;
+
+        
+        let targetSheetName = `${store.state.isFecha}${store.state.isPais}${store.state.isCierre}`;
+        console.log(targetSheetName)
+        
+        if (!sheetNames.includes(targetSheetName)) {
+          
+          targetSheetName = sheetNames[0];
+          console.log(targetSheetName)
+        }
+        console.log(targetSheetName)
+        
+        const worksheet = workbook.Sheets[targetSheetName];
+
+        
+        const rows = XLSX.utils.sheet_to_json(worksheet, { header: 1 });
+
+        this.datosChecklist = rows.slice(1).map(row => row.slice(0, 4));
+        this.headers = rows[0].slice(0, 4);
+
+        console.log('datosChecklist:', this.datosChecklist);
+        console.log('Headers:', this.headers);
+      };
+
+      reader.readAsArrayBuffer(file);
+    },
+    descargarHojaExcel() {
+      const rutaExcel = document.getElementById('excel');
+      const file = rutaExcel.files[0];
+      const reader = new FileReader();
+
+      reader.onload = async () => {
+        const arrayBuffer = reader.result;
+        const workbook = XLSX.read(arrayBuffer, { type: 'array' });
+        const sheetName = `${store.state.isFecha}${store.state.isPais}${store.state.isCierre}`;
+
+        //Hoja checklist--------------------------------------------------
+        if (workbook.SheetNames.includes(sheetName)) {
+          const sheetIndex = workbook.SheetNames.indexOf(sheetName);
+          workbook.SheetNames.splice(sheetIndex, 1);
+          delete workbook.Sheets[sheetName];
+        }
+         // Agrega 'Texto Extra' así los lee bien a la hora de volverlos a cargar otro dia
+        const datosConTextoExtra = this.datosChecklist.map(row => {
+          return [...row, 'Texto Extra'];
+        });
+        const nuevaHoja = XLSX.utils.aoa_to_sheet([this.headers, ...datosConTextoExtra]);
+
+        XLSX.utils.book_append_sheet(workbook, nuevaHoja, sheetName);
+        //Fin hoja checklist--------------------------------------------------
+        
+        //Hoja postmortem--------------------------------------------------
+        const postmortemSheetIndex = workbook.SheetNames.indexOf('Postmortem');
+        if (postmortemSheetIndex !== -1) {
+          workbook.SheetNames.splice(postmortemSheetIndex, 1);
+          delete workbook.Sheets['Postmortem'];
+        }
+        
+        const hojaPostmortem = XLSX.utils.aoa_to_sheet(this.datosPostmortem);
+        XLSX.utils.book_append_sheet(workbook, hojaPostmortem, 'Postmortem');
+        //Fin hoja postmortem--------------------------------------------------
+
+        const wbout = XLSX.write(workbook, { bookType: 'xlsx', type: 'array' });
+        const blob = new Blob([wbout], { type: 'application/octet-stream' });
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `${sheetName}.xlsx`;
+        a.click();
+        window.URL.revokeObjectURL(url);
+      };
+
+      reader.readAsArrayBuffer(file);
+    },
+    filtrarFilas(datos) {
         let filasFiltradas = [];
         switch (store.state.isPais) {
             case 'ARG':
-                filasFiltradas = this.datosMo.filter(fila => fila[5] !== null);
+                filasFiltradas = datos.filter(fila => fila[5] !== null);
                 break;
             case 'BRA':
-                filasFiltradas = this.datosMo.filter(fila => fila[6] !== null);
+                filasFiltradas = datos.filter(fila => fila[6] !== null);
                 break;
             case 'COL':
-                filasFiltradas = this.datosMo.filter(fila => fila[7] !== null);
+                filasFiltradas = datos.filter(fila => fila[7] !== null);
                 break;
             case 'CHI':
-                filasFiltradas = this.datosMo.filter(fila => fila[8] !== null);
+                filasFiltradas = datos.filter(fila => fila[8] !== null);
                 break;
             case 'URY':
-                filasFiltradas = this.datosMo.filter(fila => fila[9] !== null);
+                filasFiltradas = datos.filter(fila => fila[9] !== null);
                 break;
             default:
                 break;
@@ -79,22 +160,66 @@ export default {
         }
         return filasFiltradas;
     },
-    setHora(event) {
-      // Obtenemos la fila actual
-      const rowIndex = event.parentNode.parentNode.rowIndex;
-      const row = this.datosMo[rowIndex - 1]; // Restamos 1 porque los índices comienzan en 0
+    isDate(value, columnIndex) {
+      if (!isNaN(value) && columnIndex === 3) {
+        const excelDate = value;
+        
+        const millisecondsSince1970 = (excelDate - 25569) * 86400 * 1000;
+        
+        const fecha = new Date(millisecondsSince1970);
+        
+        
+        fecha.setHours(fecha.getHours() + 3);
 
-      // Obtenemos la fecha y hora actual
-      const fechaHoraActual = new Date().toLocaleString();
-
-      // Actualizamos el campo vacío en la fila con la fecha y hora actual
-      row[row.length - 1] = fechaHoraActual;
-
-      // Si quieres hacer algo más con la fila actual, puedes hacerlo aquí
-
-      // Notificamos que se ha actualizado la fila
-      console.log('Se ha seteado la hora para la fila:', row);
+        
+        if (!isNaN(fecha.getTime())) {
+          return `${fecha.toLocaleDateString()} ${fecha.toLocaleTimeString()}`;
+        } else {
+          return value; 
+        }
+      } else {
+        return value;
+      }
     },
+    setHora(event) {
+      
+      const rowIndex = event.target.parentNode.parentNode.rowIndex;
+      
+      const cellIndex = 3; 
+      
+      const now = new Date();
+      const excelDate = (now.getTime() - new Date(Date.UTC(1899, 11, 30)).getTime()) / (1000 * 60 * 60 * 24);
+
+      
+      this.datosChecklist[rowIndex - 1][cellIndex] = excelDate;
+
+      
+      console.log('Se ha establecido la hora para la fila:', rowIndex, 'en la columna:', cellIndex);
+    },
+    agregarFila() {
+      
+      const tipoCierre = this.$store.state.isCierre;
+      const fecha = this.$store.state.isFecha;
+      const etapa = 'Cierre'; 
+      const responsable = this.selectedOption;
+      const accion = document.getElementById('accion').value; 
+      const observaciones = document.getElementById('observaciones').value;
+      const ticket = document.getElementById('ticket').value; 
+      const jira = document.getElementById('jira').value; 
+      
+      
+      const nuevaFila = [tipoCierre, fecha, etapa, responsable, accion, observaciones, ticket, jira];
+      
+      
+      this.datosPostmortem.push(nuevaFila);
+      
+    
+    },
+    eliminarFila(index) {
+      
+      this.datosPostmortem.splice(index, 1);
+    }
+
   }
 };
 
@@ -108,15 +233,15 @@ export default {
       <div class="container-fluid">
         <div class="row">
           <div class="col-md-12 text-warning">
-            <h4>Checklist {{ variable }} {{ variable2 }} {{ variable3 }}</h4>
-            <input id="excel" type="file" @change="cargarDatosMo()"/>
+            <h4>Checklist {{ $store.state.isFecha }}{{ $store.state.isPais }}{{ $store.state.isCierre }}</h4>
+            <input id="excel" type="file" @change="cargardatosChecklist()"/>
           </div>
         </div>
         <div class="row" style="color: black;">
           <div class="col-md-12 mb-3">
             <div class="card">
               <div class="card-header bg-warning">
-                <span><i class="bi bi-table me-2"></i></span> Data Table
+                Checklist Table
               </div>
               <div class="card-body bg-warning">
                 <div class="table-responsive">
@@ -132,9 +257,9 @@ export default {
                         </tr>
                     </thead>
                     <tbody>
-                        <tr v-for="(row, index) in datosMo" :key="index">
-                        <td v-for="(cell, cellIndex) in row" :key="cellIndex">{{ cell }}</td>
-                        <td><button class="btn btn-primary btn-sm" onclick="setHora(this)">Setear hora</button></td>
+                        <tr v-for="(row, index) in datosChecklist" :key="index">
+                        <td v-for="(cell, cellIndex) in row" :key="cellIndex">{{ isDate(cell, cellIndex) ? isDate(cell, cellIndex) : cell }}</td>
+                        <td><button class="btn btn-primary btn-sm" @click="setHora($event)">Setear hora</button></td>
                         </tr>
                     </tbody>
                     <tfoot>
@@ -147,7 +272,63 @@ export default {
                 </div>
               </div>
             </div>
+            
+            
           </div>
+          <div class="col-md-12 mb-3">
+            <div class="card">
+              <div class="card-header bg-warning">
+                Postmortem Table
+              </div>
+              <div class="card-body bg-warning">
+                <div class="table-responsive">
+                  <table
+                    id="example"
+                    class="table table-striped data-table bg-warning"
+                    style="width: 100%"
+                  >
+                    <thead>
+                          <tr>
+                            <td>Tipo cierre</td>
+                            <td>Fecha</td>
+                            <td>Etapa</td>
+                            <td>Responsable</td>
+                            <td>Acción</td>
+                            <td>Observaciones</td>
+                            <td>Ticket</td>
+                            <td>Jira</td>
+                          </tr>
+                    </thead>
+                    <tbody>
+                          <tr>
+                            <td>{{ $store.state.isCierre }}</td>
+                            <td>{{ $store.state.isFecha }}</td>
+                            <td>
+                              Cierre
+                            </td>
+                            <td><select v-model="selectedOption">
+                              <!--no le des bola a este problem, funciona igual-->
+                                <option v-for="option in options" :value="option.value">{{ option.label }}</option>
+                              </select></td>
+                            <td><input id="accion"></td>
+                            <td><input id="observaciones"></td>
+                            <td><input id="ticket"></td>
+                            <td><input id="jira"></td>
+                            <td><button class="btn btn-success btn-sm" @click="agregarFila(this)">Agregar</button></td>
+                          </tr>
+                          <tr v-for="(row, index) in datosPostmortem" :key="index">
+                          <td v-for="(cell, cellIndex) in row" :key="cellIndex">{{ cell }}</td>
+                          <td><button class="btn btn-danger btn-sm" @click="eliminarFila(index)">Eliminar</button></td>
+                          </tr>
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="mt-3 text-center">
+              <button class="btn btn-success" @click="this.descargarHojaExcel()">Descargar archivo</button>
+            </div>
         </div>
       </div>
     </main>
