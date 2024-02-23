@@ -182,7 +182,7 @@ export default {
           // Crear el enlace usando el formato adecuado para Excel
           const enlace = `=HIPERVINCULO("https://jira.prosegur.com/browse/${jira}"; "${jira}")`;
           // Devolver la fila con el enlace y el valor "INCIDENCIA" agregados
-          return [...row.slice(0, -2), enlace];
+          return [...row.slice(0, -2), enlace, 'INCIDENCIA'];
         });
         const hojaPostmortem = XLSX.utils.aoa_to_sheet(datosConINCIDENCIA);
         XLSX.utils.book_append_sheet(workbook, hojaPostmortem, 'Postmortem');
