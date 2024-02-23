@@ -32,20 +32,47 @@ export default {
   },
   mounted() {
     this.cargardatosChecklist();
-    this.cargardatosPostmortem();
+    
   },
   methods: {
     async cargardatosChecklist() {
       try {
         //const rutaExcel = path.join(__dirname, `${store.state.isFecha}${store.state.isPais}${store.state.isCierre}.xlsx`);
         const workbook = await this.leerArchivoExcel(document.getElementById('excel'));
+        await this.cargardatosPostmortem(document.getElementById('excel'));
         
       } catch (error) {
         console.error('Error al cargar o procesar el archivo Excel:', error);
       }
     },
-    async cargardatosPostmortem(){
+    async cargardatosPostmortem(rutaExcel){
+      const input = rutaExcel;
+      const file = input.files[0];
+      const reader = new FileReader();
 
+      reader.onload = (event) => {
+        const data = new Uint8Array(event.target.result);
+        const workbook = XLSX.read(data, { type: 'array' });
+
+        
+        const sheetNames = workbook.SheetNames;
+
+        
+        let targetSheetName = `Postmortem`;
+        
+        if (sheetNames.includes(targetSheetName)) {
+          const worksheet = workbook.Sheets[targetSheetName];
+
+          const rows = XLSX.utils.sheet_to_json(worksheet, { header: 1 });
+          console.log(rows.length); // Verifica la longitud de datosPostmortem en la consola del navegador
+
+          this.datosPostmortem = rows.slice(0);
+          console.log(this.datosPostmortem.length);
+
+        }
+      };
+
+      reader.readAsArrayBuffer(file);
     },
     async leerArchivoExcel(rutaExcel) {
       const input = rutaExcel;
@@ -61,25 +88,44 @@ export default {
 
         
         let targetSheetName = `${store.state.isFecha}${store.state.isPais}${store.state.isCierre}`;
-        console.log(targetSheetName)
         
         if (!sheetNames.includes(targetSheetName)) {
-          
-          targetSheetName = sheetNames[0];
-          console.log(targetSheetName)
+          readXlsFile(input.files[0]).then((rows) => {
+              this.datosChecklist = rows.slice(1);
+
+              const filasFiltradas = this.filtrarFilas(this.datosChecklist);
+              const primeraFila = rows[0];
+              this.headers = primeraFila.slice(0, 4);
+
+              this.datosChecklist = filasFiltradas.slice(1).map(fila => fila.slice(0, 4));
+          });
         }
-        console.log(targetSheetName)
+        else{
         
-        const worksheet = workbook.Sheets[targetSheetName];
+          const worksheet = workbook.Sheets[targetSheetName];
 
+          
+          const rows = XLSX.utils.sheet_to_json(worksheet, { header: 1 });
+
+          this.datosChecklist = rows.slice(1).map(row => {
+            return row.slice(0, 4).map((cell, columnIndex) => {
+              if (!isNaN(cell) && columnIndex === 3) {
+                const excelDate = cell;
+                const millisecondsSince1970 = (excelDate - 25569) * 86400 * 1000;
+                let fecha = new Date(millisecondsSince1970);
+                if (!isNaN(fecha.getTime())) {
+                  // Formatear la fecha en el formato deseado (ejemplo: DD/MM/YYYY HH:mm:ss)
+                  const formattedDate = `${fecha.getDate()}/${fecha.getMonth() + 1}/${fecha.getFullYear()} ${fecha.getHours() + 3}:${fecha.getMinutes()}:${fecha.getSeconds()}`;
+                  return formattedDate;
+                }
+              }
+              return cell;
+            });
+          });
+          this.headers = rows[0].slice(0, 4);
+
+        }
         
-        const rows = XLSX.utils.sheet_to_json(worksheet, { header: 1 });
-
-        this.datosChecklist = rows.slice(1).map(row => row.slice(0, 4));
-        this.headers = rows[0].slice(0, 4);
-
-        console.log('datosChecklist:', this.datosChecklist);
-        console.log('Headers:', this.headers);
       };
 
       reader.readAsArrayBuffer(file);
@@ -100,8 +146,23 @@ export default {
           workbook.SheetNames.splice(sheetIndex, 1);
           delete workbook.Sheets[sheetName];
         }
-         // Agrega 'Texto Extra' así los lee bien a la hora de volverlos a cargar otro dia
-        const datosConTextoExtra = this.datosChecklist.map(row => {
+        const datosConTiempoArreglado = this.datosChecklist.map(row => {
+          return row.map(cell => {
+            if (!isNaN(cell) && typeof cell === 'number') {
+              const excelDate = cell;
+              const millisecondsSince1970 = (excelDate - 25569) * 86400 * 1000;
+              const fecha = new Date(millisecondsSince1970);
+              fecha.setHours(fecha.getHours());
+              return fecha;
+            } else {
+              return cell;
+            }
+          });
+        });
+
+
+          // Agrega 'Texto Extra' así los lee bien a la hora de volverlos a cargar otro dia
+        const datosConTextoExtra = datosConTiempoArreglado.map(row => {
           return [...row, 'Texto Extra'];
         });
         const nuevaHoja = XLSX.utils.aoa_to_sheet([this.headers, ...datosConTextoExtra]);
@@ -115,8 +176,15 @@ export default {
           workbook.SheetNames.splice(postmortemSheetIndex, 1);
           delete workbook.Sheets['Postmortem'];
         }
-        
-        const hojaPostmortem = XLSX.utils.aoa_to_sheet(this.datosPostmortem);
+        const datosConINCIDENCIA = this.datosPostmortem.map(row => {
+          // Obtener el valor del Jira
+          const jira = row[row.length - 2]; // Asumiendo que el Jira es la penúltima columna
+          // Crear el enlace usando el formato adecuado para Excel
+          const enlace = `=HIPERVINCULO("https://jira.prosegur.com/browse/${jira}"; "${jira}")`;
+          // Devolver la fila con el enlace y el valor "INCIDENCIA" agregados
+          return [...row.slice(0, -2), enlace];
+        });
+        const hojaPostmortem = XLSX.utils.aoa_to_sheet(datosConINCIDENCIA);
         XLSX.utils.book_append_sheet(workbook, hojaPostmortem, 'Postmortem');
         //Fin hoja postmortem--------------------------------------------------
 
@@ -161,16 +229,16 @@ export default {
         return filasFiltradas;
     },
     isDate(value, columnIndex) {
+      if (value === null) {
+        return value;
+      }
+      
       if (!isNaN(value) && columnIndex === 3) {
+        
         const excelDate = value;
         
         const millisecondsSince1970 = (excelDate - 25569) * 86400 * 1000;
-        
         const fecha = new Date(millisecondsSince1970);
-        
-        
-        fecha.setHours(fecha.getHours() + 3);
-
         
         if (!isNaN(fecha.getTime())) {
           return `${fecha.toLocaleDateString()} ${fecha.toLocaleTimeString()}`;
@@ -188,8 +256,7 @@ export default {
       const cellIndex = 3; 
       
       const now = new Date();
-      const excelDate = (now.getTime() - new Date(Date.UTC(1899, 11, 30)).getTime()) / (1000 * 60 * 60 * 24);
-
+      const excelDate = (now.getTime()   - new Date(Date.UTC(1899, 11, 30)).getTime()) / (1000 * 60 * 60 * 24);
       
       this.datosChecklist[rowIndex - 1][cellIndex] = excelDate;
 
@@ -208,7 +275,7 @@ export default {
       const jira = document.getElementById('jira').value; 
       
       
-      const nuevaFila = [tipoCierre, fecha, etapa, responsable, accion, observaciones, ticket, jira];
+      const nuevaFila = [tipoCierre, fecha, etapa, responsable, accion, observaciones, ticket, jira, 'INCIDENCIA'];
       
       
       this.datosPostmortem.push(nuevaFila);
