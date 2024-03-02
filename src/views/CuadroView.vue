@@ -175,13 +175,14 @@ export default {
           delete workbook.Sheets['Postmortem'];
         }
         const datosConINCIDENCIA = this.datosPostmortem.map(row => {
-          // Obtener el valor del Jira
-          const jira = row[row.length - 2]; // Asumiendo que el Jira es la penúltima columna
-          const enlace = jira ? `=HIPERVINCULO("https://jira.prosegur.com/browse/${jira}"; "${jira}")` : '';
-          // Devolver la fila con el enlace y el valor "INCIDENCIA" agregados
-          return [...row.slice(0, -2), enlace, 'INCIDENCIA'];
-          
-          
+            // Obtener el valor del Jira
+            const jira = row[row.length - 2]; // Asumiendo que el Jira es la penúltima columna
+            
+            // Verificar si el Jira comienza con "VI-"
+            const enlace = jira.startsWith('VI-') ? `=HIPERVINCULO("https://jira.prosegur.com/browse/${jira}"; "${jira}")` : `${jira}`;
+            
+            // Devolver la fila con el enlace y el valor "INCIDENCIA" agregados
+            return [...row.slice(0, -2), enlace, 'INCIDENCIA'];
         });
         const hojaPostmortem = XLSX.utils.aoa_to_sheet(datosConINCIDENCIA);
         XLSX.utils.book_append_sheet(workbook, hojaPostmortem, 'Postmortem');
