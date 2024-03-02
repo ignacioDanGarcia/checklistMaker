@@ -3,42 +3,100 @@
     <!-- top navigation bar -->
     <nav class="navbar navbar-expand-lg navbar-dark bg-warning fixed-top">
       <div class="container-fluid">
-        <span class="me-2" @click="toggleSidebarVisibility">
-          <i class="bi bi-list text-dark" style="font-size: 1.5em; cursor: pointer;"></i>
-        </span>
-        <RouterLink to="/" class="navbar-brand me-auto ms-lg-0 ms-3 text-uppercase fw-bold text-dark">ChecklistMaker</RouterLink>
+        <button
+         class="navbar-toggler bg-dark"
+          type="button"
+          data-bs-toggle="offcanvas"
+          data-bs-target="#sidebar"
+          aria-controls="offcanvasExample"
+        >
+          <span class="navbar-toggler-icon" data-bs-target="#sidebar"></span>
+        </button>
+        <RouterLink
+          class="navbar-brand me-auto ms-lg-0 ms-3 text-uppercase text-dark fw-bold"
+          to="/"
+          >ChecklistMaker</RouterLink
+        >
       </div>
     </nav>
     <!-- top navigation bar -->
 
-    <!-- Blur overlay -->
-    <div @click="toggleSidebarVisibility" :class="{ 'blur-overlay': sidebarVisible }"></div>
 
     <!-- offcanvas -->
-    <transition name="slide" :duration="{ enter: 1000, leave: 1000 }">
-      <div v-show="sidebarVisible" class="offcanvas offcanvas-start sidebar-nav bg-dark" tabindex="-1" id="sidebar">
-        <div class="offcanvas-body p-0">
-          <nav class="navbar-dark">
-            <ul class="navbar-nav">
-              <!-- Lista de elementos -->
-              <li v-for="(item, index) in items" :key="index" class="nav-item" @mouseover="hoverIndex = index" @mouseleave="hoverIndex = -1">
-                <RouterLink to="/" class="nav-link" :class="{ 'active': hoverIndex === index }" @click="handleClick">
-                  <span v-if="hoverIndex === index" class="text-warning">{{ item }}</span>
-                  <span v-else class="text-white">{{ item }}</span>
-                </RouterLink>
-              </li>
-            </ul>
-          </nav>
-        </div>
-      </div>
-    </transition>
-    <!-- offcanvas -->
+    <div
+    class="offcanvas offcanvas-start sidebar-nav bg-dark"
+    tabindex="-1"
+    id="sidebar"
+  >
+    <div class="offcanvas-body p-0 mt-4">
+      <nav class="navbar-dark">
+        <ul class="navbar-nav">
+          <li>
+            <div class="text-muted small fw-bold text-uppercase px-3 mb-3">
+              INICIO
+            </div>
+          </li>
+          <li v-for="(item, index) in items" :key="index" class="nav-item" @mouseover="hoverIndex = item.index" @mouseleave="hoverIndex = -1">
+            <RouterLink :to="`/`" class="nav-link" @click="handleClick">
+              <span v-if="hoverIndex === item.index" class="text-warning">{{ item.label }}</span>
+              <span v-else class="text-white">{{ item.label }}</span>
+            </RouterLink>
+          </li>
+          <li class="my-4"><hr class="dropdown-divider bg-light" /></li>
+          <li>
+            <div class="text-muted small fw-bold text-uppercase px-3 mb-3">
+              Interface
+            </div>
+          </li>
+          <li>
+            <a
+              class="nav-link px-3 sidebar-link" 
+              data-bs-toggle="collapse"
+              href="#layouts"
+            >
+              <span class="me-2"><i class="bi bi-layout-split"></i></span>
+              <span>Layouts</span>
+              <span class="ms-auto">
+                <span class="right-icon">
+                  <i class="bi bi-chevron-down"></i>
+                </span>
+              </span>
+            </a>
+            <div class="collapse" id="layouts">
+              <ul class="navbar-nav ps-3">
+                <li v-for="(layout, index) in layouts" :key="index">
+                  <div
+                    class="nav-link px-3"
+                    @mouseover="hoverIndex = layout.index"
+                    @mouseleave="hoverIndex = -1"
+                  >
+                    <span
+                      class="me-2"
+                      :class="{ 'text-warning': hoverIndex === layout.index, 'text-white': hoverIndex !== layout.index }"
+                    >
+                      <i :class="layout.icon"></i>
+                    </span>
+                    <span
+                      :class="{ 'text-warning': hoverIndex === layout.index, 'text-white': hoverIndex !== layout.index}"
+                    >
+                      {{ layout.label }}
+                    </span>
+                  </div>
+                </li>
+              </ul>
+            </div>
+          </li>
+        </ul>
+      </nav>
+    </div>
+  </div>
   </div>
 </template>
 
 <script setup>
 import { ref } from 'vue';
 import { RouterLink } from 'vue-router';
+import store from '../store/store';
 
 const sidebarVisible = ref(false);
 const hoverIndex = ref(-1);
@@ -48,21 +106,26 @@ const toggleSidebarVisibility = () => {
 };
 
 const items = [
-  "Checklist"
+  { label: "Checklist", index: 0 },
+];
+
+const layouts = [
+  { label: "Elegir tipo cierre", icon: "bi bi-speedometer2", index: 1 },
+  { label: "Elegir país", icon: "bi bi-map", index: 2 },
+  { label: "Elegir fecha", icon: "bi bi-calendar-event", index: 3 }
 ];
 
 const handleClick = () => {
-  // Realiza las acciones necesarias cuando se hace clic en el enlace
-  // Puedes acceder al almacenamiento utilizando `this.$store` si estás en un componente Vue
-  // O utilizando `store` si has importado tu almacén Vuex
-  this.$store.commit('setFecha', false);
-  this.$store.commit('setCierre', false);
-  this.$store.commit('setPais', false);
+  store.commit('setFecha', false);
+  store.commit('setCierre', false);
+  store.commit('setPais', false);
 };
 </script>
 
-
 <style scoped>
+ .navbar-toggler-icon {
+    background-image: url("data:image/svg+xml,%3csvg viewBox='0 0 30 30' xmlns='http://www.w3.org/2000/svg'%3e%3cpath stroke='rgba(255, 193, 7)' stroke-width='2' stroke-linecap='round' stroke-miterlimit='10' d='M4 7h22M4 15h22M4 23h22'/%3e%3c/svg%3e");
+  }
 .slide-enter-active, .slide-leave-active {
   transition: transform 1s; /* Transición de 1 segundo */
 }
@@ -101,9 +164,5 @@ const handleClick = () => {
   border-top: 2px solid white; /* Borde superior blanco */
   border-bottom: 2px solid white; /* Borde inferior blanco */
   padding: 10px 0; /* Espaciado interno */
-}
-
-.nav-link.active {
-  border-color: rgb(255, 193, 7); /* Cambio de color del borde al pasar el cursor */
 }
 </style>

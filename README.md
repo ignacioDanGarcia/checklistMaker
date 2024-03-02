@@ -10,7 +10,7 @@
 
 4. **Proceso de Checklist y Postmortem:**
    - Si no has generado ningún archivo para el cierre de ese día, simplemente selecciona el archivo conocido como "ChecklistGlobal" del sistema. Esto preparará los cuadros vacíos para que puedas completarlos con los datos del cierre que ingresaste anteriormente.
-   - Si ya has generado un archivo para el cierre que deseas modificar (si no recuerdas el nombre del archivo, contiene información sobre el cierre), carga todos los datos correspondientes (tipo de cierre, país y fecha). Luego, selecciona el archivo descargado anteriormente. Esto cargará los cuadros con los datos contenidos en el archivo, permitiéndote realizar modificaciones.
+   - Si ya has generado un archivo para el cierre que deseas modificar (si no recuerdas, el nombre del archivo contiene información sobre el cierre), carga todos los datos correspondientes (tipo de cierre, país y fecha) que figuran en el nombre del archivo. Luego, selecciona el archivo descargado anteriormente. Esto cargará los cuadros con los datos contenidos en el archivo, permitiéndote realizar modificaciones.
 
 5. **Edición de tablas:**
    - **Tabla de Checklist:** Permite establecer horas específicas.
