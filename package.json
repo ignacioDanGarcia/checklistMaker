@@ -9,6 +9,7 @@
     "preview": "vite preview"
   },
   "dependencies": {
+    "bootstrap-icons": "^1.11.3",
     "read-excel-file": "^5.7.1",
     "vue": "^3.4.15",
     "vue-router": "^4.2.5",

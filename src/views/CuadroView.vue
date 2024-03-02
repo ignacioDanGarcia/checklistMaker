@@ -1,7 +1,6 @@
 <script>
 import { RouterLink, RouterView } from 'vue-router';
 import Navbar from '../components/Navbar.vue';
-import Sidebar from '../components/Sidebar.vue';
 import store from '../store/store';
 import * as XLSX from 'xlsx';
 import readXlsFile from "read-excel-file";
@@ -13,8 +12,7 @@ import { ref, onMounted } from 'vue';
 
 export default {
   components:{
-    Navbar,
-    Sidebar
+    Navbar
   },
   data() {
     return {
@@ -179,10 +177,11 @@ export default {
         const datosConINCIDENCIA = this.datosPostmortem.map(row => {
           // Obtener el valor del Jira
           const jira = row[row.length - 2]; // Asumiendo que el Jira es la penúltima columna
-          // Crear el enlace usando el formato adecuado para Excel
-          const enlace = `=HIPERVINCULO("https://jira.prosegur.com/browse/${jira}"; "${jira}")`;
+          const enlace = jira ? `=HIPERVINCULO("https://jira.prosegur.com/browse/${jira}"; "${jira}")` : '';
           // Devolver la fila con el enlace y el valor "INCIDENCIA" agregados
           return [...row.slice(0, -2), enlace, 'INCIDENCIA'];
+          
+          
         });
         const hojaPostmortem = XLSX.utils.aoa_to_sheet(datosConINCIDENCIA);
         XLSX.utils.book_append_sheet(workbook, hojaPostmortem, 'Postmortem');
@@ -295,13 +294,12 @@ export default {
 <template>
   <div>
     <Navbar />
-    <Sidebar />
   <main class="mt-5 pt-3">
       <div class="container-fluid">
         <div class="row">
-          <div class="col-md-12 text-warning">
+          <div class="col-md-12 text-warning mb-4">
             <h4>Checklist {{ $store.state.isFecha }}{{ $store.state.isPais }}{{ $store.state.isCierre }}</h4>
-            <input id="excel" type="file" @change="cargardatosChecklist()"/>
+            <input id="excel" type="file" class="btn btn-warning" @change="cargardatosChecklist()"/>
           </div>
         </div>
         <div class="row" style="color: black;">

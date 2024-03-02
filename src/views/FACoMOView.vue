@@ -1,7 +1,6 @@
 <template>
   <div>
     <Navbar />
-    <Sidebar />
   
     <main class="mt-5 pt-3">
         <div class="container-fluid">
@@ -27,6 +26,11 @@
                     <p>
                       faturazao
                     </p>
+                    <br>
+                    <br>
+                    <br>
+                    <br>
+                    <br>
                   </div></RouterLink>
                 </div>
             </div>
@@ -38,12 +42,10 @@
 <script>
 import { RouterLink, RouterView } from 'vue-router';
 import Navbar from '../components/Navbar.vue';
-import Sidebar from '../components/Sidebar.vue';
 import store from '../store/store';
 export default {
   components:{
-    Navbar,
-    Sidebar
+    Navbar
   },
   data() {
       return {
@@ -83,7 +85,7 @@ body{
     width: 100%;
     height: 100%;
     padding: 2em 1.5em;
-    background: linear-gradient(#000 50%, #ffea00 50%);
+    background: linear-gradient(#000 50%, rgb(255, 193, 7) 50%);
     background-size: 100% 200%;
     background-position: 0 2.5%;
     border-radius: 5px;
@@ -93,7 +95,7 @@ body{
 h2 {
     font-size: 20px;
     font-weight: 600;
-    color: #ffea00;
+    color: rgb(255, 193, 7);
     margin: 1em 0;
 }
 
