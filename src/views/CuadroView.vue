@@ -38,7 +38,6 @@ export default {
         //const rutaExcel = path.join(__dirname, `${store.state.isFecha}${store.state.isPais}${store.state.isCierre}.xlsx`);
         const workbook = await this.leerArchivoExcel(document.getElementById('excel'));
         await this.cargardatosPostmortem(document.getElementById('excel'));
-        
       } catch (error) {
         console.error('Error al cargar o procesar el archivo Excel:', error);
       }
@@ -94,7 +93,6 @@ export default {
               const filasFiltradas = this.filtrarFilas(this.datosChecklist);
               const primeraFila = rows[0];
               this.headers = primeraFila.slice(0, 4);
-
               this.datosChecklist = filasFiltradas.slice(1).map(fila => fila.slice(0, 4));
           });
         }
@@ -117,13 +115,12 @@ export default {
                   return formattedDate;
                 }
               }
+              
               return cell;
             });
           });
           this.headers = rows[0].slice(0, 4);
-
         }
-        
       };
 
       reader.readAsArrayBuffer(file);
@@ -144,6 +141,7 @@ export default {
           workbook.SheetNames.splice(sheetIndex, 1);
           delete workbook.Sheets[sheetName];
         }
+        this.actualizarDatosChecklist();
         const datosConTiempoArreglado = this.datosChecklist.map(row => {
           return row.map(cell => {
             if (!isNaN(cell) && typeof cell === 'number') {
@@ -257,11 +255,41 @@ export default {
       
       const now = new Date();
       const excelDate = (now.getTime()   - new Date(Date.UTC(1899, 11, 30)).getTime()) / (1000 * 60 * 60 * 24);
-      
+      console.log(excelDate);
+      this.actualizarDatosChecklist();
       this.datosChecklist[rowIndex - 1][cellIndex] = excelDate;
 
       
       console.log('Se ha establecido la hora para la fila:', rowIndex, 'en la columna:', cellIndex);
+    },
+    actualizarDatosChecklist(){
+      //-----------------------
+      const inputs = document.querySelectorAll('tbody input[type="text"]');
+      let data = [];
+      const cellIndex = 3;
+      inputs.forEach(input => {
+          const rowIndex = input.closest('tr').rowIndex - 1; // Restar 1 para ajustarse al índice de datosChecklist
+
+
+          if (!data[rowIndex]) {
+              data[rowIndex] = [];
+          }
+
+          if (input.value.trim() !== "") {
+              data[rowIndex][cellIndex] = input.value.trim();
+          }
+      });
+
+      // Revisar si datosChecklist no tiene nada en [rowIndex][cellIndex], y data sí
+      this.datosChecklist.forEach((row, rowIndex) => {
+          if (!this.datosChecklist[rowIndex][cellIndex] && data[rowIndex] && data[rowIndex][cellIndex]) {
+              this.datosChecklist[rowIndex][cellIndex] = data[rowIndex][cellIndex];
+          }
+          if (this.datosChecklist[rowIndex][cellIndex] && data[rowIndex] && !data[rowIndex][cellIndex]) {
+              this.datosChecklist[rowIndex][cellIndex] = data[rowIndex][cellIndex];
+          }
+      });
+      //-----------------------
     },
     agregarFila() {
       
@@ -277,13 +305,13 @@ export default {
       
       const nuevaFila = [tipoCierre, fecha, etapa, responsable, accion, observaciones, ticket, jira, 'INCIDENCIA'];
       
-      
+      this.actualizarDatosChecklist();
       this.datosPostmortem.push(nuevaFila);
       
     
     },
     eliminarFila(index) {
-      
+      this.actualizarDatosChecklist();
       this.datosPostmortem.splice(index, 1);
     }
 
@@ -324,8 +352,18 @@ export default {
                     </thead>
                     <tbody>
                         <tr v-for="(row, index) in datosChecklist" :key="index">
-                        <td v-for="(cell, cellIndex) in row" :key="cellIndex">{{ isDate(cell, cellIndex) ? isDate(cell, cellIndex) : cell }}</td>
-                        <td><button class="btn btn-primary btn-sm" @click="setHora($event)">Setear hora</button></td>
+                          <td v-for="(cell, cellIndex) in row" :key="cellIndex">
+                              <template v-if="cellIndex === 3 && isDate(cell, cellIndex)">
+                                  <input type="text" :value="isDate(cell, cellIndex)">
+                              </template>
+                              <template v-else-if="cellIndex === 3 && !isDate(cell, cellIndex)">
+                                  <input type="text" :value="isDate(cell, cellIndex)">
+                              </template>
+                              <template v-else>
+                                  <span>{{ isDate(cell, cellIndex) }}</span>
+                              </template>
+                          </td>
+                            <td><button class="btn btn-primary btn-sm" @click="setHora($event, index, 3)">Setear hora</button></td>
                         </tr>
                     </tbody>
                     <tfoot>
